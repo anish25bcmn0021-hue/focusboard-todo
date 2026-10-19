@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7fb">
+  <title>Focusboard — Tasks & Screen Time</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f5f7fb;
+      --surface: rgba(255, 255, 255, 0.86);
+      --surface-solid: #fff;
+      --surface-soft: #f8f9fd;
+      --text: #172033;
+      --muted: #667085;
+      --border: #e5e9f2;
+      --accent: #635bff;
+      --accent-strong: #5148e8;
+      --accent-soft: #eeedff;
+      --success: #12b76a;
+      --danger: #d92d20;
+      --shadow: 0 20px 60px rgba(39, 48, 77, 0.12);
+      --radius: 18px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d111a;
+        --surface: rgba(22, 28, 40, 0.9);
+        --surface-solid: #161c28;
+        --surface-soft: #1c2331;
+        --text: #edf1f7;
+        --muted: #98a2b3;
+        --border: #2a3445;
+        --accent: #928cff;
+        --accent-strong: #aaa5ff;
+        --accent-soft: #2a2850;
+        --success: #32d583;
+        --danger: #f97066;
+        --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      padding: 28px 16px;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 5% 0%, rgba(99, 91, 255, 0.18), transparent 32%),
+        radial-gradient(circle at 100% 100%, rgba(20, 184, 166, 0.13), transparent 30%),
+        var(--bg);
+      font: 15px/1.5 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: grid;
+      place-items: center;
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .app {
+      width: min(100%, 520px);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .topbar {
+      padding: 26px 24px 22px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .eyebrow {
+      margin: 0 0 7px;
+      color: var(--accent);
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.6rem, 6vw, 2rem);
+      letter-spacing: -0.045em;
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .screen-card {
+      margin: 18px 20px 8px;
+      padding: 18px;
+      border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+      border-radius: 16px;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, var(--surface-solid)), var(--surface-soft));
+    }
+
+    .card-heading, .screen-meta, .screen-actions, .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .card-heading { margin-bottom: 12px; }
+    .card-title { margin: 0; font-size: 0.95rem; font-weight: 750; }
+    .screen-meta { align-items: end; }
+    .screen-time { margin: 0; font-size: 2rem; font-weight: 800; letter-spacing: -0.05em; line-height: 1; }
+    .screen-limit { margin: 6px 0 0; color: var(--muted); font-size: 0.8rem; }
+    .status { color: var(--muted); font-size: 0.79rem; font-weight: 650; }
+    .status.active { color: var(--success); }
+
+    .progress {
+      height: 8px;
+      margin: 16px 0;
+      overflow: hidden;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--muted) 16%, transparent);
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), #8b83ff);
+      transition: width 0.35s ease, background 0.25s ease;
+    }
+
+    .progress-bar.over { background: linear-gradient(90deg, #f79009, var(--danger)); }
+
+    .btn {
+      min-height: 38px;
+      padding: 8px 13px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      color: var(--text);
+      background: transparent;
+      font-weight: 700;
+      transition: transform 0.14s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { color: #fff; background: var(--accent); }
+    .btn-primary:hover { background: var(--accent-strong); }
+    .btn-secondary { border-color: var(--border); background: var(--surface-solid); }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 25%, var(--border)); }
+
+    .limit-form {
+      display: none;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .limit-form.visible { display: grid; }
+    .input {
+      width: 100%;
+      min-height: 40px;
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      outline: 0;
+      color: var(--text);
+      background: var(--surface-solid);
+    }
+
+    .input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+    }
+
+    .task-section { padding: 12px 20px 6px; }
+    .section-label {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .add-form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .list { list-style: none; margin: 0; padding: 0; }
+
+    .item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 11px;
+      padding: 11px 10px;
+      border-top: 1px solid var(--border);
+      animation: appear 0.25s ease both;
+    }
+
+    @keyframes appear {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .item:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+    .check {
+      appearance: none;
+      width: 21px;
+      height: 21px;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      border: 2px solid color-mix(in srgb, var(--muted) 70%, var(--text) 30%);
+      border-radius: 7px;
+      background: transparent;
+      transition: all 0.24s cubic-bezier(.2, .8, .2, 1);
+    }
+
+    .check::after {
+      content: "";
+      width: 6px;
+      height: 11px;
+      border-right: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      opacity: 0;
+      transform: rotate(45deg) scale(0.55);
+      transition: transform 0.22s cubic-bezier(.2, .8, .2, 1), opacity 0.16s ease;
+    }
+
+    .check:checked { border-color: var(--accent); background: var(--accent); transform: scale(1.05); }
+    .check:checked::after { opacity: 1; transform: rotate(45deg) scale(1); }
+    .task-text { overflow-wrap: anywhere; transition: color 0.2s ease, opacity 0.2s ease; }
+    .item.done .task-text { color: var(--muted); opacity: 0.8; text-decoration: line-through; text-decoration-thickness: 2px; }
+    .delete { min-height: 32px; padding: 5px 9px; font-size: 0.8rem; }
+    .empty { display: none; margin: 18px 0; color: var(--muted); text-align: center; }
+
+    .footer {
+      margin-top: 8px;
+      padding: 15px 20px 19px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 420px) {
+      body { padding: 12px; }
+      .topbar { padding: 22px 18px 18px; }
+      .screen-card { margin-inline: 14px; }
+      .task-section { padding-inline: 14px; }
+      .footer { padding-inline: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" aria-label="Focusboard task and screen time app">
+    <header class="topbar">
+      <p class="eyebrow">Focusboard</p>
+      <h1>Make time for what matters.</h1>
+      <p class="subtitle">A calm space for your tasks and digital balance.</p>
+    </header>
+
+    <section class="screen-card" aria-labelledby="screenHeading">
+      <div class="card-heading">
+        <h2 id="screenHeading" class="card-title">Screen time control</h2>
+        <span id="screenStatus" class="status">Paused</span>
+      </div>
+      <div class="screen-meta">
+        <div>
+          <p id="screenTime" class="screen-time">00:00</p>
+          <p id="screenLimit" class="screen-limit">Daily limit: 02:00</p>
+        </div>
+        <button id="limitBtn" class="btn btn-secondary" type="button">Set limit</button>
+      </div>
+      <div class="progress" aria-label="Screen time used">
+        <div id="progressBar" class="progress-bar"></div>
+      </div>
+      <div class="screen-actions">
+        <span id="screenHint" class="status">Track your active time on this app.</span>
+        <button id="toggleTimerBtn" class="btn btn-primary" type="button">Start tracking</button>
+      </div>
+      <form id="limitForm" class="limit-form">
+        <input id="limitInput" class="input" type="number" min="1" max="1440" inputmode="numeric" placeholder="Minutes per day">
+        <button class="btn btn-primary" type="submit">Save</button>
+      </form>
+    </section>
+
+    <section class="task-section" aria-labelledby="tasksHeading">
+      <p id="tasksHeading" class="section-label">Today's tasks</p>
+      <form id="addForm" class="add-form">
+        <input id="taskInput" class="input" type="text" maxlength="140" placeholder="What needs your attention?" autocomplete="off">
+        <button class="btn btn-primary" type="submit">Add task</button>
+      </form>
+      <ul id="taskList" class="list" aria-live="polite"></ul>
+      <p id="emptyState" class="empty">Your task list is clear. Enjoy the breathing room.</p>
+    </section>
+
+    <footer class="footer">
+      <span id="countLabel">0 tasks</span>
+      <span>Private · saved on this device</span>
+    </footer>
+  </main>
+
+  <script>
+    const TASKS_KEY = "focusboard-tasks-v2";
+    const SCREEN_KEY = "focusboard-screen-time-v1";
+    const seedTasks = [
+      { id: crypto.randomUUID(), text: "Plan tomorrow's top three priorities", done: false },
+      { id: crypto.randomUUID(), text: "Reply to project review comments", done: true },
+      { id: crypto.randomUUID(), text: "Take a 20-minute walk after lunch", done: false }
+    ];
+
+    const $ = (id) => document.getElementById(id);
+    const taskInput = $("taskInput");
+    const addForm = $("addForm");
+    const taskList = $("taskList");
+    const countLabel = $("countLabel");
+    const emptyState = $("emptyState");
+    const screenTime = $("screenTime");
+    const screenLimit = $("screenLimit");
+    const screenStatus = $("screenStatus");
+    const screenHint = $("screenHint");
+    const progressBar = $("progressBar");
+    const toggleTimerBtn = $("toggleTimerBtn");
+    const limitBtn = $("limitBtn");
+    const limitForm = $("limitForm");
+    const limitInput = $("limitInput");
+
+    let tasks = loadTasks();
+    let screen = loadScreenState();
+
+    function today() {
+      const date = new Date();
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    }
+
+    function loadTasks() {
+      try {
+        const raw = localStorage.getItem(TASKS_KEY);
+        if (!raw) {
+          localStorage.setItem(TASKS_KEY, JSON.stringify(seedTasks));
+          return seedTasks;
+        }
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) throw new Error("Invalid task data");
+        return parsed.filter(task => task && typeof task.id === "string" && typeof task.text === "string" && typeof task.done === "boolean");
+      } catch {
+        localStorage.setItem(TASKS_KEY, JSON.stringify(seedTasks));
+        return seedTasks;
+      }
+    }
+
+    function loadScreenState() {
+      const fallback = { date: today(), limitMinutes: 120, totalSeconds: 0, running: false, startedAt: null };
+      try {
+        const parsed = JSON.parse(localStorage.getItem(SCREEN_KEY));
+        const state = { ...fallback, ...(parsed || {}) };
+        if (state.date !== today()) return fallback;
+        return state;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function saveTasks() {
+      localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+    }
+
+    function saveScreen() {
+      localStorage.setItem(SCREEN_KEY, JSON.stringify(screen));
+    }
+
+    function currentSeconds() {
+      if (!screen.running || !screen.startedAt) return screen.totalSeconds;
+      return screen.totalSeconds + Math.max(0, Math.floor((Date.now() - screen.startedAt) / 1000));
+    }
+
+    function formatTime(seconds) {
+      const safeSeconds = Math.max(0, Math.floor(seconds));
+      const hours = Math.floor(safeSeconds / 3600);
+      const minutes = Math.floor((safeSeconds % 3600) / 60);
+      const secs = safeSeconds % 60;
+      return hours ? `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}` : `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    }
+
+    function renderScreen() {
+      const used = currentSeconds();
+      const limitSeconds = screen.limitMinutes * 60;
+      const percentage = Math.min(100, (used / limitSeconds) * 100);
+      screenTime.textContent = formatTime(used);
+      screenLimit.textContent = `Daily limit: ${formatTime(limitSeconds)}`;
+      progressBar.style.width = `${percentage}%`;
+      progressBar.classList.toggle("over", used > limitSeconds);
+      screenStatus.textContent = screen.running ? "Tracking now" : "Paused";
+      screenStatus.classList.toggle("active", screen.running);
+      screenHint.textContent = used > limitSeconds ? "You have reached today's limit." : `${formatTime(Math.max(0, limitSeconds - used))} remaining today`;
+      toggleTimerBtn.textContent = screen.running ? "Pause tracking" : "Start tracking";
+    }
+
+    function renderTasks() {
+      taskList.textContent = "";
+      tasks.forEach(task => {
+        const item = document.createElement("li");
+        item.className = `item${task.done ? " done" : ""}`;
+        item.dataset.id = task.id;
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.className = "check";
+        checkbox.checked = task.done;
+        checkbox.setAttribute("aria-label", `Mark "${task.text}" complete`);
+
+        const text = document.createElement("span");
+        text.className = "task-text";
+        text.textContent = task.text;
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.className = "btn btn-danger delete";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.setAttribute("aria-label", `Delete "${task.text}"`);
+
+        item.append(checkbox, text, deleteBtn);
+        taskList.appendChild(item);
+      });
+
+      const remaining = tasks.filter(task => !task.done).length;
+      countLabel.textContent = `${remaining} remaining · ${tasks.length} total`;
+      emptyState.style.display = tasks.length ? "none" : "block";
+    }
+
+    addForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const text = taskInput.value.trim();
+      if (!text) return;
+      tasks.unshift({ id: crypto.randomUUID(), text, done: false });
+      saveTasks();
+      renderTasks();
+      taskInput.value = "";
+      taskInput.focus();
+    });
+
+    taskList.addEventListener("click", (event) => {
+      const target = event.target;
+      const item = target.closest(".item");
+      if (!item) return;
+      const index = tasks.findIndex(task => task.id === item.dataset.id);
+      if (index < 0) return;
+      if (target.matches(".check")) tasks[index].done = target.checked;
+      if (target.matches(".delete")) tasks.splice(index, 1);
+      saveTasks();
+      renderTasks();
+    });
+
+    toggleTimerBtn.addEventListener("click", () => {
+      if (screen.running) {
+        screen.totalSeconds = currentSeconds();
+        screen.running = false;
+        screen.startedAt = null;
+      } else {
+        screen.running = true;
+        screen.startedAt = Date.now();
+      }
+      saveScreen();
+      renderScreen();
+    });
+
+    limitBtn.addEventListener("click", () => {
+      limitForm.classList.toggle("visible");
+      if (limitForm.classList.contains("visible")) {
+        limitInput.value = screen.limitMinutes;
+        limitInput.focus();
+      }
+    });
+
+    limitForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const minutes = Number(limitInput.value);
+      if (!Number.isFinite(minutes) || minutes < 1 || minutes > 1440) return;
+      screen.limitMinutes = Math.round(minutes);
+      saveScreen();
+      renderScreen();
+      limitForm.classList.remove("visible");
+    });
+
+    setInterval(() => {
+      if (screen.date !== today()) {
+        screen = { date: today(), limitMinutes: screen.limitMinutes, totalSeconds: 0, running: false, startedAt: null };
+        saveScreen();
+      }
+      renderScreen();
+    }, 1000);
+
+    renderTasks();
+    renderScreen();
+  </script>
+</body>
+</html>
