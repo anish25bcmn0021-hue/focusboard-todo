@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://anish25bcmn0021-hue.github.io/focusboard-todo/sitemap.xml
