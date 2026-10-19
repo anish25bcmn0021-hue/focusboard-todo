@@ -196,9 +196,11 @@
       const formatMinutes = (seconds) => { const minutes = Math.floor(Math.max(0, seconds) / 60); return `${minutes}m`; };
       const formatTimer = (seconds) => `${String(Math.floor(Math.max(0, seconds) / 60)).padStart(2, "0")}:${String(Math.max(0, seconds) % 60).padStart(2, "0")}`;
       const validTask = (task) => task && typeof task.id === "string" && typeof task.title === "string" && task.title.trim() && typeof task.completed === "boolean";
-      let tasks = safeParse(KEYS.tasks, []).filter(validTask).map(task => ({ ...task, priority: ["low", "medium", "high"].includes(task.priority) ? task.priority : "medium", due: typeof task.due === "string" ? task.due : "", createdAt: Number(task.createdAt) || Date.now() }));
+      const storedTasks = safeParse(KEYS.tasks, []);
+      const storedSessions = safeParse(KEYS.sessions, []);
+      let tasks = (Array.isArray(storedTasks) ? storedTasks : []).filter(validTask).map(task => ({ ...task, priority: ["low", "medium", "high"].includes(task.priority) ? task.priority : "medium", due: typeof task.due === "string" ? task.due : "", createdAt: Number(task.createdAt) || Date.now() }));
       let settings = { ...defaults, ...safeParse(KEYS.settings, {}) };
-      let sessions = safeParse(KEYS.sessions, []).filter(item => item && item.date === today && Number.isFinite(item.seconds));
+      let sessions = (Array.isArray(storedSessions) ? storedSessions : []).filter(item => item && item.date === today && Number.isFinite(item.seconds));
       let filter = "all";
       let editingId = null;
 

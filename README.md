@@ -17,6 +17,8 @@ Many productivity tools add noise before they help users start. Focusboard keeps
 - Defensive localStorage parsing, clear-data control, validation, and responsive accessible UI
 - Works as a static site on GitHub Pages
 
+The app starts with an empty task list. It stores tasks under `focusboard.tasks.v3`, timer preferences under `focusboard.settings.v3`, and current-day session records under `focusboard.sessions.v3`.
+
 ## Technologies
 
 Focusboard uses semantic HTML, modern CSS, and vanilla JavaScript. It has no build step, framework, API key, backend, analytics script, or external runtime dependency.
@@ -44,7 +46,7 @@ All links and assets are relative, so the app works from a GitHub Pages project 
 
 Tasks, preferences, and session history are stored only in this browser's localStorage. Nothing is sent to a server. Local browser data does not sync across devices and may be lost if browser storage is cleared.
 
-Focusboard measures elapsed sessions while the app is open or can recover a saved in-progress timestamp after refresh. It does **not** measure total device screen time, other browser tabs, other applications, or background activity outside Focusboard.
+Focusboard measures elapsed sessions inside the app and can recover a saved in-progress timestamp after refresh or a tab switch. It does **not** measure total device screen time, other browser tabs, other applications, or background activity outside Focusboard. Session history and the focus goal cover the current local calendar day.
 
 ## Screenshots
 
@@ -70,3 +72,15 @@ Store images in a folder such as `docs/screenshots/` and embed them with Markdow
 ## Lessons learned
 
 Focusboard is intentionally local-first: the most reliable analytics are the ones the app can explain from saved events. Timestamp-based timer state is more resilient than decrementing a counter, and progressive disclosure keeps task planning useful on small screens.
+
+## QA notes
+
+The current static build was manually checked in a browser for:
+
+- Task creation, editing, completion, deletion confirmation, priorities, due-date validation, search, all four filters, statistics, and refresh persistence
+- Timer start, pause, resume, reset, refresh recovery, tab/visibility transitions, focus-to-break rollover, break-to-focus rollover, daily goal progress, and session history
+- Empty input handling, invalid dates, malformed localStorage shapes, clear-data confirmation, and browser error capture during the tested interactions
+- Responsive CSS paths for desktop, tablet, and phone breakpoints, with no horizontal overflow in the compact preview
+- Relative navigation paths suitable for a GitHub Pages project URL
+
+There is no backend or automated test runner; browser behavior is intentionally verified against the static page itself.
