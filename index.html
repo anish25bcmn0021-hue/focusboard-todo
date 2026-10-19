@@ -128,11 +128,23 @@
     .history-item { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: .8rem; }
     .history-item strong { color: var(--text); font-variant-numeric: tabular-nums; }
     .notice { margin: 18px 0 0; padding: 12px 14px; border: 1px solid rgba(154, 140, 255, .2); border-radius: 12px; color: var(--muted); background: var(--accent-soft); font-size: .78rem; }
+    .pricing { margin-top: 18px; }
+    .pricing-intro { max-width: 650px; margin-bottom: 18px; color: var(--muted); }
+    .pricing-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .price-card { position: relative; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel-2); }
+    .price-card.featured { border-color: rgba(154, 140, 255, .62); box-shadow: inset 0 0 0 1px rgba(154, 140, 255, .12); }
+    .price-card h3 { margin: 0 0 5px; font-size: 1rem; }
+    .price { margin: 0 0 12px; font-size: 1.65rem; font-weight: 850; letter-spacing: -.04em; }
+    .price small { color: var(--muted); font-size: .76rem; font-weight: 600; letter-spacing: 0; }
+    .price-list { display: grid; gap: 8px; padding: 0; margin: 0 0 17px; color: var(--muted); list-style: none; font-size: .84rem; }
+    .price-list li::before { margin-right: 8px; color: var(--green); content: "✓"; font-weight: 800; }
+    .plan-state { position: absolute; top: 17px; right: 17px; padding: 3px 7px; border-radius: 6px; color: var(--muted); background: var(--panel-3); font-size: .68rem; font-weight: 800; }
+    .checkout-note { min-height: 20px; margin: 10px 0 0; color: var(--amber); font-size: .76rem; }
     .footer { display: flex; justify-content: space-between; gap: 18px; margin-top: 24px; color: var(--muted); font-size: .78rem; }
     .footer a { color: var(--muted); }
     @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } .timer-card { order: -1; } }
     @media (max-width: 720px) { .hero { display: block; } .hero-meta { margin-top: 20px; } .task-form { grid-template-columns: 1fr 1fr; } .task-form .task-title-input { grid-column: 1 / -1; } .task-form .btn-primary { grid-column: 1 / -1; } }
-    @media (max-width: 520px) { .shell { width: min(100% - 22px, 1180px); padding-top: 20px; } .topbar { align-items: flex-start; } .nav { display: none; } .card-inner { padding: 17px; } .stats { grid-template-columns: 1fr 1fr 1fr; } .task { grid-template-columns: auto minmax(0, 1fr); } .task-actions { grid-column: 2; } .footer { display: block; } .footer span { display: block; margin-top: 8px; } }
+    @media (max-width: 520px) { .shell { width: min(100% - 22px, 1180px); padding-top: 20px; } .topbar { align-items: flex-start; } .nav { display: none; } .card-inner { padding: 17px; } .stats { grid-template-columns: 1fr 1fr 1fr; } .task { grid-template-columns: auto minmax(0, 1fr); } .task-actions { grid-column: 2; } .pricing-grid { grid-template-columns: 1fr; } .footer { display: block; } .footer span { display: block; margin-top: 8px; } }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
   </style>
 </head>
@@ -180,6 +192,28 @@
         </div>
       </aside>
     </main>
+    <section id="pricing" class="card pricing" aria-labelledby="pricingHeading">
+      <div class="card-inner">
+        <div class="card-title-row"><div><p class="eyebrow">Simple plans</p><h2 id="pricingHeading">Choose your pace</h2></div><span class="muted">No recurring charge</span></div>
+        <p class="pricing-intro">Start with a focused task list for free, or unlock more room for ambitious planning with a one-time Pro purchase.</p>
+        <div class="pricing-grid">
+          <article class="price-card">
+            <span class="plan-state">Current plan</span>
+            <h3>Free</h3>
+            <p class="price">$0 <small>forever</small></p>
+            <ul class="price-list"><li>Up to 10 active tasks</li><li>Unlimited focus timer sessions</li><li>Local-first task and session history</li></ul>
+          </article>
+          <article class="price-card featured">
+            <span class="plan-state">Coming soon</span>
+            <h3>Focusboard Pro</h3>
+            <p class="price">$1 <small>one-time</small></p>
+            <ul class="price-list"><li>Unlimited active tasks</li><li>Unlimited focus timer sessions</li><li>Everything in Free</li></ul>
+            <button id="upgradeButton" class="btn btn-primary" type="button">Upgrade to Pro</button>
+            <p id="checkoutNote" class="checkout-note" role="status">Checkout and verified activation are not configured yet.</p>
+          </article>
+        </div>
+      </div>
+    </section>
     <footer id="privacy" class="footer"><span>Local-first: tasks, preferences, and session history are saved in this browser.</span><span><a href="feedback.html">Share feedback</a> · <button id="clearData" class="btn btn-ghost" type="button">Clear saved data</button> · <a href="README.md">About this project</a></span></footer>
   </div>
 
@@ -187,6 +221,11 @@
     (() => {
       "use strict";
       const KEYS = { tasks: "focusboard.tasks.v3", settings: "focusboard.settings.v3", sessions: "focusboard.sessions.v3" };
+      const TASK_LIMIT = 10;
+      // Entitlements intentionally do not come from localStorage; a future secure verifier can replace this source.
+      const verifiedEntitlement = Object.freeze({ plan: "free", verified: false });
+      const hasVerifiedProEntitlement = () => verifiedEntitlement.verified === true && verifiedEntitlement.plan === "pro";
+      const canCreateTask = () => hasVerifiedProEntitlement() || tasks.filter(task => !task.completed).length < TASK_LIMIT;
       const defaults = { focusMinutes: 25, breakMinutes: 5, goalMinutes: 120, mode: "focus", running: false, startedAt: null, elapsedBeforeStart: 0, remainingSeconds: 1500 };
       const $ = (id) => document.getElementById(id);
       const safeParse = (key, fallback) => { try { const value = JSON.parse(localStorage.getItem(key)); return value ?? fallback; } catch { return fallback; } };
@@ -248,7 +287,7 @@
       function finishTimer() { const duration = Number(settings[settings.mode === "focus" ? "focusMinutes" : "breakMinutes"]) * 60; if (settings.mode === "focus") sessions.push({ date: today, mode: "focus", seconds: duration }); settings.mode = settings.mode === "focus" ? "break" : "focus"; settings.running = false; settings.startedAt = null; settings.elapsedBeforeStart = 0; settings.remainingSeconds = Number(settings[settings.mode === "focus" ? "focusMinutes" : "breakMinutes"]) * 60; saveTimer(); renderTimer(); }
       function toggleTimer() { const current = timerState(); if (settings.running) { settings.remainingSeconds = current; settings.running = false; settings.startedAt = null; settings.elapsedBeforeStart = 0; } else { if (current <= 0) resetTimer(); settings.remainingSeconds = current; settings.startedAt = Date.now(); settings.running = true; } saveTimer(); renderTimer(); }
 
-      $("taskForm").addEventListener("submit", (event) => { event.preventDefault(); const title = $("taskTitle").value.trim(); $("formError").textContent = title ? "" : "Add a task title before saving."; if (!title) { $("taskTitle").focus(); return; } const due = $("taskDue").value; const existingTask = editingId ? tasks.find(item => item.id === editingId) : null; if (due && due < today && due !== existingTask?.due) { $("formError").textContent = "Choose today or a future due date."; $("taskDue").focus(); return; } const data = { title, priority: $("taskPriority").value, due, completed: false, createdAt: Date.now() }; if (existingTask) { Object.assign(existingTask, data, { completed: existingTask.completed }); editingId = null; $("saveTask").textContent = "Add task"; $("cancelEdit").hidden = true; } else { tasks.unshift({ id: crypto.randomUUID(), ...data }); } save(KEYS.tasks, tasks); event.target.reset(); $("taskPriority").value = "medium"; renderTasks(); $("taskTitle").focus(); });
+      $("taskForm").addEventListener("submit", (event) => { event.preventDefault(); const title = $("taskTitle").value.trim(); $("formError").textContent = title ? "" : "Add a task title before saving."; if (!title) { $("taskTitle").focus(); return; } const due = $("taskDue").value; const existingTask = editingId ? tasks.find(item => item.id === editingId) : null; if (!existingTask && !canCreateTask()) { $("formError").textContent = "Free plans allow up to 10 active tasks. Complete or delete a task, or upgrade when Pro checkout is available."; $("taskTitle").focus(); return; } if (due && due < today && due !== existingTask?.due) { $("formError").textContent = "Choose today or a future due date."; $("taskDue").focus(); return; } const data = { title, priority: $("taskPriority").value, due, completed: false, createdAt: Date.now() }; if (existingTask) { Object.assign(existingTask, data, { completed: existingTask.completed }); editingId = null; $("saveTask").textContent = "Add task"; $("cancelEdit").hidden = true; } else { tasks.unshift({ id: crypto.randomUUID(), ...data }); } save(KEYS.tasks, tasks); event.target.reset(); $("taskPriority").value = "medium"; renderTasks(); $("taskTitle").focus(); });
       $("cancelEdit").addEventListener("click", () => { editingId = null; $("taskForm").reset(); $("taskPriority").value = "medium"; $("saveTask").textContent = "Add task"; $("cancelEdit").hidden = true; $("formError").textContent = ""; });
       $("taskList").addEventListener("click", (event) => { const item = event.target.closest(".task"); if (!item) return; const task = tasks.find(entry => entry.id === item.dataset.id); if (!task) return; const action = event.target.dataset.action; if (action === "delete") { if (!confirm(`Delete “${task.title}”?`)) return; tasks = tasks.filter(entry => entry.id !== task.id); save(KEYS.tasks, tasks); renderTasks(); } if (action === "edit") { editingId = task.id; $("taskTitle").value = task.title; $("taskPriority").value = task.priority; $("taskDue").value = task.due; $("saveTask").textContent = "Save changes"; $("cancelEdit").hidden = false; $("taskTitle").focus(); } });
       $("taskList").addEventListener("change", (event) => { const item = event.target.closest(".task"); if (!item || !event.target.matches(".check")) return; const task = tasks.find(entry => entry.id === item.dataset.id); if (task) { task.completed = event.target.checked; save(KEYS.tasks, tasks); renderTasks(); } });
@@ -257,6 +296,7 @@
       $("focusMinutes").addEventListener("change", event => { const value = Math.min(180, Math.max(1, Number(event.target.value) || 25)); settings.focusMinutes = value; if (!settings.running && settings.mode === "focus") settings.remainingSeconds = value * 60; saveTimer(); renderTimer(); });
       $("breakMinutes").addEventListener("change", event => { const value = Math.min(60, Math.max(1, Number(event.target.value) || 5)); settings.breakMinutes = value; if (!settings.running && settings.mode === "break") settings.remainingSeconds = value * 60; saveTimer(); renderTimer(); });
       $("goalButton").addEventListener("click", () => { const value = Number(prompt("Daily focus goal in minutes:", settings.goalMinutes)); if (Number.isFinite(value) && value >= 1 && value <= 1440) { settings.goalMinutes = Math.round(value); saveTimer(); renderTimer(); } });
+      $("upgradeButton").addEventListener("click", () => { $("checkoutNote").textContent = "Checkout and verified activation are not configured yet. No payment was processed and your plan remains Free."; });
       $("clearData").addEventListener("click", () => { if (!confirm("Clear all Focusboard tasks, preferences, and session history from this browser?")) return; Object.values(KEYS).forEach(key => localStorage.removeItem(key)); tasks = []; sessions = []; settings = { ...defaults }; renderTasks(); renderTimer(); });
       setInterval(() => { if (dateKey() !== today) return; if (settings.running && timerState() <= 0) finishTimer(); renderTimer(); }, 1000);
       window.addEventListener("pagehide", () => { if (settings.running) { settings.remainingSeconds = timerState(); settings.startedAt = Date.now(); saveTimer(); } });
