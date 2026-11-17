@@ -24,6 +24,10 @@ The app starts with an empty task list. It stores tasks under `focusboard.tasks.
 
 Focusboard uses semantic HTML, modern CSS, and vanilla JavaScript. It has no build step, framework, API key, backend, analytics script, or external runtime dependency.
 
+## License
+
+Focusboard is available under the [MIT License](LICENSE).
+
 ## Run locally
 
 Open `index.html` directly in a browser, or serve the folder with any static server:
